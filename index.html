@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Absensi QR Code</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e9ecef;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #343a40;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+
+        #reader {
+            width: 100%;
+            height: 300px;
+            margin-top: 20px;
+            border: 2px solid #28a745;
+            border-radius: 5px;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #absentMessage {
+            margin-top: 20px;
+            text-align: center;
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        a {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.3s;
+            font-size: 1rem;
+        }
+
+        a:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            button, a {
+                font-size: 0.9rem;
+            }
+
+            #absentMessage {
+                font-size: 1rem;
+            }
+
+            #reader {
+                height: 350px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Absensi dengan QR Code</h1>
+        <div id="reader"></div>
+        <button id="checkIn">Absen Masuk</button>
+        <button id="checkOut">Absen Keluar</button>
+        <p id="absentMessage"></p>
+        <a href="index.html" id="goBack">Kembali</a>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
+
+    <script>
+        // Fungsi untuk memindai QR Code
+        function scanQRCode(callback) {
+            const html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 } 
+                },
+                (decodedText) => {
+                    try {
+                        const userData = JSON.parse(decodedText);
+                        const storedData = localStorage.getItem(userData.id);
+                        if (storedData) {
+                            callback(JSON.parse(storedData));
+                        } else {
+                            document.getElementById('absentMessage').textContent = "Data tidak ditemukan!";
+                        }
+                    } catch (error) {
+                        document.getElementById('absentMessage').textContent = "QR Code tidak valid!";
+                    }
+                },
+                (errorMessage) => {
+                    console.log(`Error scanning QR Code: ${errorMessage}`);
+                }
+            ).catch(err => {
+                console.error("Error starting QR scanner: ", err);
+            });
+        }
+
+        // Menyimpan data absensi
+        function saveAbsensi(data, status) {
+            const now = new Date();
+            const dateString = now.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
+            const timeString = now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' }).split(':').slice(0, 2).join(':');
+            const attendanceData = JSON.parse(localStorage.getItem('absensi')) || {};
+
+            if (!attendanceData[dateString]) {
+                attendanceData[dateString] = {};
+            }
+
+            if (!attendanceData[dateString][data.id]) {
+                attendanceData[dateString][data.id] = {
+                    name: data.name,
+                    masuk: null,
+                    keluar: null
+                };
+            }
+
+            const userAttendance = attendanceData[dateString][data.id];
+
+            if (status === 'Absen Masuk') {
+                if (userAttendance.masuk) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Info',
+                        text: `${data.name} sudah melakukan absen masuk!`,
+                    });
+                    return;
+                }
+                userAttendance.masuk = timeString;
+            } else if (status === 'Absen Keluar') {
+                if (userAttendance.keluar) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Info',
+                        text: `${data.name} sudah melakukan absen keluar!`,
+                    });
+                    return;
+                }
+                userAttendance.keluar = timeString;
+            }
+
+            localStorage.setItem('absensi', JSON.stringify(attendanceData));
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: `${status} untuk ${data.name} berhasil pada ${dateString} jam ${timeString}!`,
+            });
+        }
+
+        // Event listener untuk tombol absen
+        document.getElementById('checkIn').addEventListener('click', () => {
+            scanQRCode((userData) => saveAbsensi(userData, 'Absen Masuk'));
+        });
+
+        document.getElementById('checkOut').addEventListener('click', () => {
+            scanQRCode((userData) => saveAbsensi(userData, 'Absen Keluar'));
+        });
+
+        // Event listener untuk tombol kembali
+        document.getElementById('goBack').addEventListener('click', function () {
+            location.href = 'index.html';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Absensi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            background: #fff;
+            border-radius: 12px;
+            padding: 5% 5%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        input[type="text"], select, input[type="date"] {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus, select:focus, input[type="date"]:focus {
+            border-color: #007bff;
+        }
+
+        button, #downloadLink, #goToAbsen {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            margin-top: 10px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+            transform: translateY(-3px);
+        }
+
+        #downloadLink {
+            background-color: #28a745;
+            color: #fff;
+            display: none;
+        }
+
+        #downloadLink:hover {
+            background-color: #218838;
+            transform: translateY(-3px);
+        }
+
+        #goToAbsen {
+            background-color: #6c757d;
+            color: #fff;
+            display: none;
+        }
+
+        #goToAbsen:hover {
+            background-color: #5a6268;
+            transform: translateY(-3px);
+        }
+
+        #message {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        .qr-code {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .qr-code canvas {
+            border: 8px solid #f0f2f5;
+            border-radius: 12px;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        @media (max-width: 500px) {
+            .container {
+                padding: 5% 5%;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            button, #downloadLink, #goToAbsen {
+                font-size: 0.9rem;
+                padding: 12px;
+            }
+
+            #message {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Buat QR Code</h1>
+        <form id="qrForm">
+            <input type="text" id="name" placeholder="Nama" required>
+            <input type="date" id="birthdate" placeholder="Tanggal Lahir" required>
+            <select id="gender" required>
+                <option value="">Pilih Jenis Kelamin</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
+            </select>
+            <input type="text" id="religion" placeholder="Agama" required>
+            <input type="text" id="address" placeholder="Alamat" required>
+            <input type="text" id="ktp" placeholder="No KTP" required>
+            <input type="text" id="phone" placeholder="Nomor Telepon" required>
+            <input type="text" id="email" placeholder="Email" required>
+            <button type="submit">Buat QR Code</button>
+        </form>
+        <div id="qrCode" class="qr-code"></div>
+        <p id="message"></p>
+        <button id="downloadLink">Download QR Code</button>
+        <a href="absen.html" id="goToAbsen">Ke Halaman Absensi</a>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+  function createQRCode(name, birthdate, gender, religion, address, ktp, phone, email) {
+    // Menggunakan kombinasi name, KTP, dan timestamp untuk membuat ID unik
+    const uniqueID = btoa(`${name}-${ktp}-${new Date().getTime()}`);
+    const qrData = JSON.stringify({ name, birthdate, gender, religion, address, ktp, phone, email, uniqueID });
+    
+    // Simpan data QR ke localStorage
+    localStorage.setItem(ktp, qrData);
+
+    // Cek apakah elemen qrCode ada, dan reset isinya sebelum membuat QR baru
+    const qrCodeDiv = document.getElementById('qrCode');
+    if (qrCodeDiv) {
+        qrCodeDiv.innerHTML = ''; // Kosongkan elemen sebelum menambah QR baru
+
+        // Membuat QR Code baru
+        new QRCode(qrCodeDiv, {
+            text: qrData,
+            width: 200,
+            height: 200,
+        });
+    }
+
+    // Mengatur tombol download
+    const downloadButton = document.getElementById('downloadLink');
+    if (downloadButton) {
+        downloadButton.style.display = 'block'; // Tampilkan tombol
+        downloadButton.onclick = function() {
+            generateStyledQRCode(name, ktp, uniqueID); // Fungsi untuk mengunduh QR dengan style
+        };
+    }
+
+    return "QR Code berhasil dibuat!";
+}
+
+function generateStyledQRCode() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const qrCodeDiv = document.getElementById('qrCode');
+    const qrCanvas = qrCodeDiv.querySelector('canvas');
+
+    if (!qrCanvas) {
+        console.error("QR Canvas is not available.");
+        return;
+    }
+
+    const qrSize = 250; // Ukuran QR Code di layar
+    const margin = 20; // Margin di sekitar QR Code
+    const borderRadius = 30; // Border radius untuk tampilan lebih keren
+    const scaleFactor = 4; // Scale factor untuk resolusi HD (4x ukuran asli)
+
+    const width = (qrSize + margin * 2) * scaleFactor;
+    const height = (qrSize + margin * 2) * scaleFactor;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Scale-up context agar resolusinya lebih tinggi
+    ctx.scale(scaleFactor, scaleFactor);
+
+    // Background dengan border radius dan shadow
+    ctx.fillStyle = '#ffffff'; // Background putih
+    ctx.beginPath();
+    ctx.moveTo(borderRadius, 0);
+    ctx.lineTo((qrSize + margin * 2) - borderRadius, 0);
+    ctx.quadraticCurveTo((qrSize + margin * 2), 0, (qrSize + margin * 2), borderRadius);
+    ctx.lineTo((qrSize + margin * 2), (qrSize + margin * 2) - borderRadius);
+    ctx.quadraticCurveTo((qrSize + margin * 2), (qrSize + margin * 2), (qrSize + margin * 2) - borderRadius, (qrSize + margin * 2));
+    ctx.lineTo(borderRadius, (qrSize + margin * 2));
+    ctx.quadraticCurveTo(0, (qrSize + margin * 2), 0, (qrSize + margin * 2) - borderRadius);
+    ctx.lineTo(0, borderRadius);
+    ctx.quadraticCurveTo(0, 0, borderRadius, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Tambahkan shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 5;
+
+    // Gambar QR Code di tengah
+    ctx.drawImage(qrCanvas, margin, margin, qrSize, qrSize);
+
+    // Download QR Code dengan resolusi tinggi
+    const downloadLink = document.getElementById('downloadLink');
+    downloadLink.onclick = function() {
+        const imgData = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = imgData;
+        a.download = `QRCode_HD.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+}
+
+// Event listener for the form submission
+document.getElementById('qrForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const name = document.getElementById('name').value;
+    const birthdate = document.getElementById('birthdate').value;
+    const gender = document.getElementById('gender').value;
+    const religion = document.getElementById('religion').value;
+    const address = document.getElementById('address').value;
+    const ktp = document.getElementById('ktp').value;
+    const phone = document.getElementById('phone').value;
+    const email = document.getElementById('email').value;
+
+    const message = createQRCode(name, birthdate, gender, religion, address, ktp, phone, email);
+    document.getElementById('message').textContent = message;
+
+    // Show the goToAbsen button
+    const goToAbsenButton = document.getElementById('goToAbsen');
+    goToAbsenButton.style.display = 'block';
+});
+</script>
+</body>
+</html>

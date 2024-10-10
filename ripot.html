@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Absensi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #343a40;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #dee2e6;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+
+        .icon-container {
+            display: flex;
+            justify-content: space-between; /* Mengatur jarak antar ikon */
+            margin-bottom: 20px;
+        }
+
+        .icon-button {
+            display: flex;
+            align-items: center;
+            padding: 6px; /* Padding yang lebih kecil */
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            font-size: 0.8rem; /* Ukuran teks lebih kecil */
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.3s;
+            width: 48%; /* Lebar ikon 48% agar ada ruang di antara ikon */
+            justify-content: center; /* Pusatkan isi */
+            margin-right: 10px; /* Jarak antar tombol */
+        }
+
+        .icon-button:last-child {
+            margin-right: 0; /* Menghapus margin kanan untuk tombol terakhir */
+        }
+
+        .icon-button:hover {
+            background-color: #0056b3;
+        }
+
+        .icon-button i {
+            margin-right: 4px; /* Spasi antara ikon dan teks lebih kecil */
+            font-size: 0.8rem; /* Ukuran ikon lebih kecil */
+        }
+
+        @media print {
+            .icon-button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Laporan Absensi</h1>
+        <table id="attendanceTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nama</th>
+                    <th>Tanggal</th>
+                    <th>Absen Masuk</th>
+                    <th>Absen Keluar</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data absensi akan ditampilkan di sini -->
+            </tbody>
+        </table>
+
+        <div class="icon-container">
+            <a href="#" id="downloadPDF" class="icon-button"><i class="fas fa-file-pdf"></i> Unduh PDF</a>
+            <a href="#" id="downloadExcel" class="icon-button"><i class="fas fa-file-excel"></i> Unduh Excel</a>
+            <a href="#" onclick="window.print()" class="icon-button"><i class="fas fa-print"></i> Cetak</a>
+            <a href="index.html" class="icon-button"><i class="fas fa-arrow-left"></i> Kembali</a>
+        </div>
+    </div>
+
+    <!-- jsPDF library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- SheetJS library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+
+    <script>
+        // Fungsi untuk menampilkan data absensi dari localStorage
+        function loadAttendanceData() {
+            const tableBody = document.querySelector('#attendanceTable tbody');
+            tableBody.innerHTML = ''; // Kosongkan tabel sebelum mengisi data
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('absensi_')) { // Pastikan kunci sesuai
+                    const data = JSON.parse(localStorage.getItem(key));
+
+                    const row = `
+                        <tr>
+                            <td>${data.id}</td>
+                            <td>${data.name}</td>
+                            <td>${key.split('_').pop()}</td>
+                            <td>${data.masuk || '-'}</td>
+                            <td>${data.keluar || '-'}</td>
+                        </tr>
+                    `;
+                    tableBody.insertAdjacentHTML('beforeend', row);
+                }
+            }
+        }
+
+        // Fungsi untuk mengunduh laporan dalam format PDF
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.text("Laporan Absensi", 14, 16);
+            doc.autoTable({
+                html: '#attendanceTable',
+                startY: 20,
+                headStyles: { fillColor: [40, 167, 69] }, // Gaya header tabel
+                theme: 'grid'
+            });
+
+            doc.save('Laporan_Absensi.pdf');
+        }
+
+        // Fungsi untuk mengunduh laporan dalam format Excel
+        function downloadExcel() {
+            const workbook = XLSX.utils.book_new();
+            const worksheetData = [["ID", "Nama", "Tanggal", "Absen Masuk", "Absen Keluar"]];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('absensi_')) {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    worksheetData.push([data.id, data.name, key.split('_').pop(), data.masuk || '-', data.keluar || '-']);
+                }
+            }
+            
+            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Absensi");
+            
+            XLSX.writeFile(workbook, "Laporan_Absensi.xlsx");
+        }
+
+        document.getElementById('downloadPDF').addEventListener('click', function(event) {
+            event.preventDefault(); // Mencegah perilaku default anchor
+            downloadPDF();
+        });
+        
+        document.getElementById('downloadExcel').addEventListener('click', function(event) {
+            event.preventDefault(); // Mencegah perilaku default anchor
+            downloadExcel();
+        });
+
+        // Panggil fungsi untuk menampilkan data saat halaman dimuat
+        window.onload = loadAttendanceData;
+    </script>
+
+    <!-- Tambahkan library autoTable untuk membuat tabel PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</body>
+</html>
